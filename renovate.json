@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "description": "Vector version in Dockerfile ARG",
+      "customType": "regex",
+      "fileMatch": ["^Dockerfile$"],
+      "matchStrings": [
+        "VECTOR_VERSION=\"(?<currentValue>[\\d.]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "vectordotdev/vector",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "description": "hassio-addons base image versions in build.yaml",
+      "customType": "regex",
+      "fileMatch": ["^build\\.yaml$"],
+      "matchStrings": [
+        "(?<depName>ghcr\\.io/hassio-addons/[^:]+):(?<currentValue>[\\d.]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Group all arch variants of the same base image into one PR",
+      "matchPackagePatterns": ["ghcr.io/hassio-addons/"],
+      "groupName": "hassio-addons base image"
+    }
+  ]
+}
