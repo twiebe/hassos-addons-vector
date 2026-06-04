@@ -68,9 +68,11 @@ Stream labels are auto-generated from the active transforms using the same logic
 
 ## Config override
 
-For use cases not covered by the addon options, you can supply a handwritten Vector configuration file. Enable **Override Config** and set **Override Config Path** to the path of your file (default: `/config/vector.yaml`).
+For use cases not covered by the addon options, you can supply a handwritten Vector configuration file. Enable **Override Config** and set **Override Config Path** to the path of your file (default: `vector.yaml`).
 
 The override file lives in the addon's own config directory, which Home Assistant mounts from `/addon_configs/{repo}_vector/` on the host. You can manage files there via the Samba addon or the Studio Code Server addon.
+
+**Override Config Path** is resolved relative to that directory, so the default `vector.yaml` refers to `/addon_configs/{repo}_vector/vector.yaml` — just drop the file in and go. A subdirectory works too (e.g. `conf/vector.yaml`). For backwards compatibility an absolute path is also accepted and used verbatim; the addon config dir is mounted at `/config` inside the container, so the previous default `/config/vector.yaml` continues to point at the same file.
 
 When override mode is active, **all other addon options are ignored entirely** — the addon copies your file directly to the Vector config location and starts Vector with it. The generated config is not written and no transforms are applied. The override file is still printed to the addon log at startup (with passwords obfuscated).
 

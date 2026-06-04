@@ -19,12 +19,21 @@ bashio::log.info "Configuring Vector..."
 
 if bashio::config.true 'override_config'; then
     OVERRIDE_PATH=$(bashio::config 'override_config_path')
-    bashio::log.info "Override config enabled, using: ${OVERRIDE_PATH}"
-    if [ ! -f "${OVERRIDE_PATH}" ]; then
-        bashio::log.fatal "Override config file not found: ${OVERRIDE_PATH}"
+
+    # Resolve the override path. A relative path is looked up inside the addon
+    # config dir (mounted at /config); an absolute path is used as-is, which
+    # keeps older configs that set e.g. /config/vector.yaml working.
+    case "${OVERRIDE_PATH}" in
+        /*) RESOLVED_OVERRIDE_PATH="${OVERRIDE_PATH}" ;;
+        *)  RESOLVED_OVERRIDE_PATH="/config/${OVERRIDE_PATH}" ;;
+    esac
+
+    bashio::log.info "Override config enabled, using: ${RESOLVED_OVERRIDE_PATH}"
+    if [ ! -f "${RESOLVED_OVERRIDE_PATH}" ]; then
+        bashio::log.fatal "Override config file not found: ${RESOLVED_OVERRIDE_PATH} (from override_config_path='${OVERRIDE_PATH}')"
         exit 1
     fi
-    cp "${OVERRIDE_PATH}" "${CONFIG_FILE}"
+    cp "${RESOLVED_OVERRIDE_PATH}" "${CONFIG_FILE}"
     print_config
     exit 0
 fi
