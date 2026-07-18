@@ -81,6 +81,7 @@ sinks:
       container_name: "{{ printf "{{ %s }}" $containerField }}"
       systemd_unit: "{{ printf "{{ %s }}" $systemdUnitField }}"
       priority: "{{ printf "{{ %s }}" $priorityField }}"
+    dangerously_allow_unconfined_template_resolution: true
     remove_label_fields: true
     encoding:
       codec: {{ .loki_encoding }}
