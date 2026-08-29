@@ -28,6 +28,8 @@ The two transforms are independent and can be combined. When both are enabled, l
 
 ## Sinks
 
+Endpoint URLs must include an explicit `http://` or `https://` scheme. An endpoint that is empty or has no scheme fails startup with an error in the addon log rather than being silently completed with a default.
+
 ### VictoriaLogs
 
 [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/) exposes an Elasticsearch-compatible bulk ingest API, which is what Vector uses under the hood — the sink type in Vector's config is `elasticsearch`, but the addon models this honestly as `victorialogs` since the configuration (in particular the `query` parameters) is specific to VictoriaLogs and not portable to plain Elasticsearch or OpenSearch.
