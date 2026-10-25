@@ -2,10 +2,13 @@ name: Build Vector Addon (Dev)
 
 on:
   push:
-    branches-ignore:
-      - main
-    tags-ignore:
-      - "*"
+    branches:
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: build-dev
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -26,9 +29,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Sanitize branch name for Docker tag
+      - name: Derive dev version from commit
         id: tag
-        run: echo "tag=$(echo "${GITHUB_REF_NAME}" | sed 's/[^a-zA-Z0-9._-]/-/g')" >> $GITHUB_OUTPUT
+        run: echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Read base image from build.yaml
         id: base
@@ -53,8 +56,44 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
-          tags: ghcr.io/${{ github.repository_owner }}/hassos-addons-vector-${{ matrix.arch }}:${{ steps.tag.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/hassos-addons-vector-${{ matrix.arch }}:dev
+            ghcr.io/${{ github.repository_owner }}/hassos-addons-vector-${{ matrix.arch }}:${{ steps.tag.outputs.tag }}
           build-args: |
             BUILD_FROM=${{ steps.base.outputs.image }}
             BUILD_ARCH=${{ matrix.arch }}
             BUILD_VERSION=${{ steps.tag.outputs.tag }}
+
+  bump-addon:
+    name: Point vector-dev addon at this build
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      HASSOS_ADDONS_PAT: ${{ secrets.HASSOS_ADDONS_PAT }}
+
+    steps:
+      - name: Skip without HASSOS_ADDONS_PAT
+        if: env.HASSOS_ADDONS_PAT == ''
+        run: echo "::notice::HASSOS_ADDONS_PAT not set, run 'make dev-bump' in hassos-addons instead"
+
+      - name: Checkout hassos-addons
+        if: env.HASSOS_ADDONS_PAT != ''
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/hassos-addons
+          token: ${{ secrets.HASSOS_ADDONS_PAT }}
+
+      - name: Commit new dev version
+        if: env.HASSOS_ADDONS_PAT != ''
+        run: |
+          version="dev-${GITHUB_SHA::7}"
+          sed -i "s/^version: .*/version: \"$version\"/" vector-dev/config.yaml
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(vector-dev): point at $version"
+          for _ in 1 2 3; do
+            git pull --rebase && git push && exit 0
+            sleep 5
+          done
+          exit 1

@@ -84,6 +84,16 @@ The override file must be a valid [Vector configuration file](https://vector.dev
 
 ## Development
 
-Dev builds are triggered automatically on every push to a non-`main` branch. Images are tagged with the sanitized branch name and pushed to GHCR.
+`main` holds released code, `dev` is where development happens. Renovate opens its PRs against `dev`.
 
-Release builds are triggered when a GitHub release is published. Tag the release with a bare version number (e.g. `0.1.0`). After a successful build the workflow automatically opens a commit in `hassos-addons` bumping the version in `vector/config.yaml`. This requires a `HASSOS_ADDONS_PAT` secret set in this repo with write access to `hassos-addons`.
+Every push to `dev` builds images tagged `dev` and `dev-<short sha>` and pushes them to GHCR. The workflow then sets `version: "dev-<short sha>"` in `vector-dev/config.yaml` of [twiebe/hassos-addons](https://github.com/twiebe/hassos-addons). Home Assistant installations with the **Vector (dev)** addon offer this as a regular update. That step needs a `HASSOS_ADDONS_PAT` secret in this repo: a token with contents write access to `hassos-addons`. Without it the step is skipped, and `make dev-bump` in `hassos-addons` does the same by hand.
+
+Pushing a version tag (e.g. `0.8.0`) builds the release images tagged with that version.
+
+### Release
+
+1. Add release notes to `hassos-addons/vector-dev/CHANGELOG.md` under `## <version>` and push them to `main`.
+2. Here, run `make release` (needs an authenticated `gh`). It reads that changelog section from `hassos-addons` `main` and fails if it is missing or empty. Then it fast-forwards `main` to `dev`, creates an annotated tag with the section as message, pushes, waits for the release images and creates the GitHub release with the tag message as description.
+3. In `hassos-addons`, run `make release VERSION=<version>`. It copies `vector-dev/` to `vector/`, sets the version and commits.
+
+The version defaults to the next minor after the latest tag. Override it with `VERSION=x.y.z`. `make` lists all targets.

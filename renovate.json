@@ -3,6 +3,9 @@
   "extends": [
     "config:recommended"
   ],
+  "baseBranchPatterns": [
+    "dev"
+  ],
   "customManagers": [
     {
       "description": "Vector version in Dockerfile ARG",
