@@ -91,18 +91,18 @@ _supervisor_dns() {
     docker rm -f hassio_dns >/dev/null 2>&1 || true
     mkdir -p "${E2E_DATA}/e2e"
     printf '. {\n    forward . /etc/resolv.conf\n    cache 30\n}\n' > "${E2E_DATA}/e2e/Corefile"
-    docker run -d --name e2e-dns --network hassio --ip "$ip" \
+    docker run -d --quiet --name e2e-dns --network hassio --ip "$ip" \
         -v "${E2E_DATA}/e2e/Corefile:/Corefile:ro" "${COREDNS_IMAGE:-docker.io/coredns/coredns:1.15.0}" \
         -conf /Corefile >/dev/null
 }
 
 supervisor_start() {
     [ -n "$SUPERVISOR_ARCH" ] || die "unsupported architecture: $(uname -m)"
-    local version image
-    version=$(curl -fsSL https://version.home-assistant.io/stable.json | jq -r '.supervisor')
-    [ -n "$version" ] && [ "$version" != null ] || die "could not read the stable Supervisor version"
-    image="ghcr.io/home-assistant/${SUPERVISOR_ARCH}-hassio-supervisor:${version}"
-    log "starting Supervisor $version ($SUPERVISOR_MACHINE)"
+    local image
+    SUPERVISOR_VERSION=$(curl -fsSL https://version.home-assistant.io/stable.json | jq -r '.supervisor')
+    [ -n "$SUPERVISOR_VERSION" ] && [ "$SUPERVISOR_VERSION" != null ] || die "could not read the stable Supervisor version"
+    image="ghcr.io/home-assistant/${SUPERVISOR_ARCH}-hassio-supervisor:${SUPERVISOR_VERSION}"
+    log "starting Supervisor $SUPERVISOR_VERSION ($SUPERVISOR_MACHINE)"
     docker pull -q "$image" >/dev/null
 
     mkdir -p "$E2E_DATA"

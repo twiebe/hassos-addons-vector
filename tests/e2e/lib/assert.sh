@@ -7,6 +7,7 @@
 # An optional config/ dir is copied into the addon config dir first.
 
 _case_fail() {
+    CASE_REASON=$*
     echo "[e2e] $CASE_NAME: $*" >&2
     echo "[e2e] --- addon log (last 40) ---" >&2
     addon_logs | tail -n 40 >&2

@@ -31,17 +31,45 @@ addon_install
 
 passed=0
 failed=()
+report=()
 log "${#cases[@]} cases"
 for dir in "${cases[@]}"; do
     name=$(basename "$dir")
+    CASE_REASON=""
+    start=$SECONDS
     if case_run "$dir"; then
         passed=$((passed + 1))
+        report+=("ACK|$name|$((SECONDS - start))|")
         log "PASS $name"
     else
         failed+=("$name")
+        report+=("NACK|$name|$((SECONDS - start))|${CASE_REASON:-failed}")
         log "FAIL $name"
     fi
 done
+
+# Readable protocol, also as Markdown when E2E_REPORT names a file (e.g. the
+# CI job summary).
+echo
+echo "E2E protocol ($SUPERVISOR_MACHINE, Supervisor ${SUPERVISOR_VERSION:-?})"
+for row in "${report[@]}"; do
+    IFS='|' read -r status name secs reason <<<"$row"
+    printf '  %-4s  %-22s %4ss  %s\n' "$status" "$name" "$secs" "$reason"
+done
+echo
+if [ -n "${E2E_REPORT:-}" ]; then
+    {
+        echo "### E2E $SUPERVISOR_MACHINE: ${passed} passed, ${#failed[@]} failed"
+        echo
+        echo "| Result | Case | Time | Reason |"
+        echo "|---|---|---|---|"
+        for row in "${report[@]}"; do
+            IFS='|' read -r status name secs reason <<<"$row"
+            echo "| $status | \`$name\` | ${secs}s | ${reason//|/\\|} |"
+        done
+        echo
+    } >>"$E2E_REPORT"
+fi
 
 log "${passed} passed, ${#failed[@]} failed${failed:+: ${failed[*]}}"
 [ "${#failed[@]}" -eq 0 ]

@@ -124,6 +124,7 @@ Environment variables:
 | `CASES` | Run only the cases matching this glob, e.g. `CASES='loki-*'` |
 | `KEEP=1` | Leave all containers and the Supervisor data dir in place after the run, for debugging. The next run still starts clean |
 | `E2E_DATA` | Supervisor data dir, default `/tmp/supervisor-e2e` |
+| `E2E_REPORT` | Append the ACK/NACK protocol as a Markdown table to this file. CI uses the job summary |
 
 ### Release
 

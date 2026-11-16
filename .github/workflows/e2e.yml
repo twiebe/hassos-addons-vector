@@ -33,4 +33,4 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Run e2e tests
-        run: sudo tests/e2e/run.sh
+        run: sudo E2E_REPORT="$GITHUB_STEP_SUMMARY" tests/e2e/run.sh

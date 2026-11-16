@@ -20,12 +20,12 @@ backend_endpoint() {
 
 backends_launch() {
     log "starting VictoriaLogs, Loki and multi-tenant Loki"
-    docker run -d --name e2e-victorialogs -p 9428:9428 "$VICTORIALOGS_IMAGE" >/dev/null
-    docker run -d --name e2e-loki -p 3100:3100 "$LOKI_IMAGE" \
+    docker run -d --quiet --name e2e-victorialogs -p 9428:9428 "$VICTORIALOGS_IMAGE" >/dev/null
+    docker run -d --quiet --name e2e-loki -p 3100:3100 "$LOKI_IMAGE" \
         -config.file=/etc/loki/local-config.yaml -ingester.min-ready-duration=0s >/dev/null
     # A separate multi-tenant Loki: it rejects pushes without X-Scope-OrgID,
     # which would break the default Loki case.
-    docker run -d --name e2e-loki-mt -p 3101:3100 "$LOKI_IMAGE" \
+    docker run -d --quiet --name e2e-loki-mt -p 3101:3100 "$LOKI_IMAGE" \
         -config.file=/etc/loki/local-config.yaml -auth.enabled=true -ingester.min-ready-duration=0s >/dev/null
 }
 
