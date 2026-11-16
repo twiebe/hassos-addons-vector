@@ -1,0 +1,20 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "transforms": {
+      "lowercase_fields": true,
+      "rename_host_field": true,
+      "host_field_name": "hostname"
+    },
+    "sink_type": "victorialogs",
+    "sink_victorialogs": {
+      "endpoint": "@ENDPOINT@/insert/elasticsearch"
+    }
+  },
+  "expect": {
+    "record": [
+      ".fields._stream | contains(\"hostname=\")",
+      "if (.line | endswith(\" container\")) then (.fields._stream | contains(\"container_name=\")) else true end"
+    ]
+  }
+}

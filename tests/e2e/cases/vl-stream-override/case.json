@@ -1,0 +1,15 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "transforms": { "lowercase_fields": true },
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "@ENDPOINT@/insert/elasticsearch", "stream_fields": "_systemd_unit" }
+  },
+  "expect": {
+    "record": [
+      ".fields._stream | contains(\"_systemd_unit=\")",
+      ".fields._stream | contains(\"container_name\") | not",
+      ".fields._stream | contains(\"host=\") | not"
+    ]
+  }
+}
