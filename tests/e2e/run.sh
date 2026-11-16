@@ -21,6 +21,8 @@ host_check
 teardown
 trap teardown EXIT
 host_prepare
+supervisor_start
+ha supervisor info >/dev/null
 
 passed=0
 failed=()
