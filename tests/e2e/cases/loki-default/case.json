@@ -1,0 +1,14 @@
+{
+  "backend": "loki",
+  "options": {
+    "sink_type": "loki",
+    "sink_loki": { "endpoint": "@ENDPOINT@" }
+  },
+  "expect": {
+    "started": true,
+    "record": [
+      ".labels.host != null",
+      ".line | contains(\"e2e\")"
+    ]
+  }
+}

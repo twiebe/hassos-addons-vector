@@ -20,9 +20,23 @@ ha() {
     echo "$out"
 }
 
+# supervisor_api <METHOD> <path> [<json body>]: call the Supervisor API from the
+# CLI container, which holds an API token. Same result handling as ha().
+supervisor_api() {
+    local out
+    out=$(printf '%s' "${3:-}" | docker exec -i hassio_cli sh -c \
+        'curl -sS -X "$1" -H "Authorization: Bearer $SUPERVISOR_TOKEN" -H "Content-Type: application/json" \
+            ${2:+--data-binary @-} "http://supervisor$0"' "$2" "$1" "${3:+body}" 2>&1) || true
+    if [ "$(jq -r '.result // empty' <<<"$out" 2>/dev/null)" != ok ]; then
+        echo "[e2e] $1 $2: $(jq -r '.message // empty' <<<"$out" 2>/dev/null || echo "$out")" >&2
+        return 1
+    fi
+    echo "$out"
+}
+
 supervisor_dump() {
-    echo "[e2e] --- docker logs hassio_supervisor (last 100, pull progress filtered) ---" >&2
-    docker logs hassio_supervisor 2>&1 | grep -vE 'pull_update|pull_progress' | tail -n 100 >&2 || true
+    echo "[e2e] --- docker logs hassio_supervisor (last 100, no DEBUG) ---" >&2
+    docker logs hassio_supervisor 2>&1 | grep -v ' DEBUG ' | tail -n 100 >&2 || true
 }
 
 # wait_for <timeout seconds> <description> <command...>
@@ -59,6 +73,23 @@ _supervisor_health() {
     esac
 }
 
+# On a container host (e.g. an OrbStack machine) plugin containers cannot
+# lower their oom_score_adj and fail to start. Without the DNS plugin nothing
+# on the hassio network resolves names, so the addon build fails. Stand in
+# with a plain CoreDNS on the plugin's address.
+_supervisor_dns() {
+    local ip
+    wait_for 30 "DNS plugin" sh -c '[ "$(docker inspect -f {{.State.Running}} hassio_dns 2>/dev/null)" = true ]' && return 0
+    ip=$(ha dns info | jq -r '.data.host')
+    log "DNS plugin did not start (container host?), using CoreDNS on $ip instead"
+    docker rm -f hassio_dns >/dev/null 2>&1 || true
+    mkdir -p "${E2E_DATA}/e2e"
+    printf '. {\n    forward . /etc/resolv.conf\n    cache 30\n}\n' > "${E2E_DATA}/e2e/Corefile"
+    docker run -d --name e2e-dns --network hassio --ip "$ip" \
+        -v "${E2E_DATA}/e2e/Corefile:/Corefile:ro" "${COREDNS_IMAGE:-docker.io/coredns/coredns:latest}" \
+        -conf /Corefile >/dev/null
+}
+
 supervisor_start() {
     [ -n "$SUPERVISOR_ARCH" ] || die "unsupported architecture: $(uname -m)"
     local version image
@@ -90,4 +121,5 @@ supervisor_start() {
         { supervisor_dump; die "ha CLI did not come up"; }
     log "Supervisor API up"
     _supervisor_health
+    _supervisor_dns
 }

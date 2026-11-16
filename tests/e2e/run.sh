@@ -22,7 +22,8 @@ teardown
 trap teardown EXIT
 host_prepare
 supervisor_start
-ha supervisor info >/dev/null
+backends_start
+addon_install
 
 passed=0
 failed=()

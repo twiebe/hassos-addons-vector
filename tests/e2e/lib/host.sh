@@ -45,11 +45,11 @@ host_prepare() {
 teardown() {
     [ "${KEEP:-}" = 1 ] && { log "KEEP=1, leaving containers and ${E2E_DATA} in place"; return 0; }
     local ids
-    ids=$(docker ps -aq --filter 'name=^(hassio_|addon_|homeassistant$|e2e-)' 2>/dev/null || true)
+    ids=$(docker ps -aq --filter 'name=^(hassio_|addon_|app_|homeassistant$|e2e-)' 2>/dev/null || true)
     # docker's name filter is a substring regex on some versions, so check again.
     ids=$(for id in $ids; do
         n=$(docker inspect -f '{{.Name}}' "$id" 2>/dev/null | sed 's#^/##')
-        echo "$n" | grep -qE '^(hassio_|addon_|homeassistant$|e2e-)' && echo "$id"
+        echo "$n" | grep -qE '^(hassio_|addon_|app_|homeassistant$|e2e-)' && echo "$id"
     done)
     [ -n "$ids" ] && docker rm -f $ids >/dev/null
     docker network rm hassio >/dev/null 2>&1 || true
