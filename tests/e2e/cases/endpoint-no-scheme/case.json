@@ -1,0 +1,13 @@
+{
+  "backend": "none",
+  "options": {
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "172.30.32.1:9428" }
+  },
+  "expect": {
+    "started": false,
+    "log_contains": [
+      "Option 'sink_victorialogs.endpoint' has no URL scheme: 172.30.32.1:9428"
+    ]
+  }
+}

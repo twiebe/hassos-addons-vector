@@ -1,0 +1,14 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "transforms": { "lowercase_fields": true },
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "@ENDPOINT@/insert/elasticsearch" }
+  },
+  "expect": {
+    "record": [
+      "(.fields.container_name // .fields._systemd_unit) != null",
+      "[.fields | keys[] | select(test(\"[A-Z]\"))] == []"
+    ]
+  }
+}

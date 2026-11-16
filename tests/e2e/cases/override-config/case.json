@@ -1,0 +1,14 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "override_config": true,
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "@ENDPOINT@/insert/elasticsearch" }
+  },
+  "expect": {
+    "log_contains": ["Override config enabled, using: /config/vector.yaml"],
+    "record": [
+      ".fields.e2e_override == true or .fields.e2e_override == \"true\""
+    ]
+  }
+}

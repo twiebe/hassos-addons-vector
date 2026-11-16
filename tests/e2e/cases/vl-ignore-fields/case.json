@@ -1,0 +1,14 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "@ENDPOINT@/insert/elasticsearch", "ignore_fields": "_PID,_COMM" }
+  },
+  "expect": {
+    "record": [
+      ".fields._PID == null",
+      ".fields._COMM == null",
+      ".fields.host != null"
+    ]
+  }
+}

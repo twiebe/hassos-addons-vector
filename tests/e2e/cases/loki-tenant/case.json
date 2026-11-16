@@ -1,0 +1,12 @@
+{
+  "backend": "loki-mt",
+  "options": {
+    "sink_type": "loki",
+    "sink_loki": { "endpoint": "@ENDPOINT@", "tenant_id": "e2e-tenant" }
+  },
+  "expect": {
+    "record": [
+      ".labels.host != null"
+    ]
+  }
+}

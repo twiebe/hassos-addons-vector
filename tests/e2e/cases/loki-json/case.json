@@ -1,0 +1,16 @@
+{
+  "backend": "loki",
+  "options": {
+    "sink_type": "loki",
+    "sink_loki": {
+      "endpoint": "@ENDPOINT@",
+      "encoding": "json"
+    }
+  },
+  "expect": {
+    "record": [
+      ".fields.message | contains(\"e2e\")",
+      ".fields._PID != null"
+    ]
+  }
+}
