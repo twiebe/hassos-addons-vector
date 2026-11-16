@@ -19,7 +19,7 @@ case_run() {
     spec=$(cat "$dir/case.json")
     backend=$(jq -r '.backend' <<<"$spec")
     endpoint=$(backend_endpoint "$backend")
-    expect_started=$(jq -r '.expect.started // true' <<<"$spec")
+    expect_started=$(jq -r 'if .expect | has("started") then .expect.started else true end' <<<"$spec")
     options=$(jq -c --slurpfile d "$ADDON_DEFAULTS" --arg e "$endpoint" \
         '$d[0] * .options | walk(if type == "string" then gsub("@ENDPOINT@"; $e) else . end)' <<<"$spec")
 
