@@ -1,0 +1,12 @@
+{
+  "backend": "loki",
+  "options": {
+    "sink_type": "loki",
+    "sink_loki": { "endpoint": "@ENDPOINT@", "encoding": "text" }
+  },
+  "expect": {
+    "record": [
+      ".line | test(\"^e2e-[a-z0-9-]+ (unit|container)$\")"
+    ]
+  }
+}

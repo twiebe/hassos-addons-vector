@@ -1,0 +1,18 @@
+{
+  "backend": "loki",
+  "options": {
+    "sink_type": "loki",
+    "sink_loki": {
+      "endpoint": "@ENDPOINT@",
+      "encoding": "json"
+    }
+  },
+  "expect": {
+    "record": [
+      ".labels.host != null",
+      "if (.line | contains(\" unit\")) then (.labels.priority == \"4\" and (.labels.systemd_unit | startswith(\"e2e-u-\")) and ((.labels.container_name // \"\") == \"\")) else (.labels.container_name | startswith(\"e2e-c-\")) end",
+      ".fields.CONTAINER_NAME == null and .fields._SYSTEMD_UNIT == null and .fields.PRIORITY == null and .fields.host == null",
+      ".fields.message | contains(\"e2e\")"
+    ]
+  }
+}
