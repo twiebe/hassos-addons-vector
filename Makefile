@@ -13,7 +13,7 @@ help: ## Show targets and the release flow
 	@echo "  1. Work on dev (Renovate PRs target dev). Every push to dev builds :dev and :dev-<sha>"
 	@echo "     and points the vector-dev addon in hassos-addons at it; HA offers it as an update."
 	@echo "  2. Note changes in hassos-addons/vector-dev/CHANGELOG.md under '## <version>'."
-	@echo "  3. Here:            make release   (dev -> main, tag, wait for the image, GitHub release)"
+	@echo "  3. Here:            make release   (waits for green e2e on dev, dev -> main, tag, wait for the image, GitHub release)"
 	@echo "     Needs 'gh auth login'. Release notes come from that changelog section on hassos-addons main."
 	@echo "  4. In hassos-addons: make release VERSION=<version>   (vector-dev -> vector)"
 	@echo
@@ -29,12 +29,13 @@ status: ## Show versions involved in the next release
 	@echo "dev ahead of main:"
 	@git log --oneline origin/main..origin/dev
 
-release: ## Fast-forward main to dev, tag VERSION with changelog notes, push, wait for the image, create GitHub release
+release: ## Wait for a green e2e run on dev, fast-forward main to dev, tag VERSION with changelog notes, push, wait for the image, create GitHub release
 	@echo '$(VERSION)' | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$$' || { echo "VERSION must be x.y.z"; exit 1; }
 	@gh auth status >/dev/null 2>&1 || { echo "gh not authenticated, run 'gh auth login'"; exit 1; }
 	@test -z "$$(git status --porcelain)" || { echo "working tree not clean"; exit 1; }
 	git fetch origin --tags
 	@! git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null || { echo "tag $(VERSION) already exists"; exit 1; }
+	scripts/wait-build.sh e2e.yml $$(git rev-parse origin/dev)
 	scripts/release-notes.sh $(ADDONS_REPO) $(VERSION) > $(NOTES)
 	@echo "Release notes for $(VERSION):"; cat $(NOTES)
 	git switch main

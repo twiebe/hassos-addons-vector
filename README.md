@@ -90,10 +90,45 @@ Every push to `dev` builds images tagged `dev` and `dev-<short sha>` and pushes 
 
 Pushing a version tag (e.g. `0.8.0`) builds the release images tagged with that version.
 
+### E2E tests
+
+`tests/e2e/run.sh` runs a real Home Assistant Supervisor, installs this addon built from the working tree as a local addon, and checks that logs arrive in VictoriaLogs and Loki. Each directory under `tests/e2e/cases/` is one test case: addon options, the backend, and what must arrive. Adding a case needs no script changes.
+
+The workflow `e2e.yml` runs it on amd64 and aarch64 for pull requests against `dev`, pushes to `dev` and on manual dispatch. `make release` requires that run to be green.
+
+The script needs Linux with systemd, journald, dbus and Docker, and runs as root. It switches Docker's log driver to `journald` and enables the persistent journal, and does not undo either. Use a dedicated host, such as a CI runner or a throwaway VM. Basic auth is not covered.
+
+On a Mac with OrbStack, use an isolated Linux machine. The plain OrbStack Docker engine has no systemd. Set the machine up once:
+
+```sh
+orb create --isolated ubuntu ha-e2e
+orb -m ha-e2e -u root sh -c 'apt-get update && apt-get install -y docker.io jq curl fuse-overlayfs &&
+  echo "{\"storage-driver\": \"fuse-overlayfs\", \"features\": {\"containerd-snapshotter\": false}}" > /etc/docker/daemon.json &&
+  systemctl restart docker'
+```
+
+The machine's overlayfs cannot rename directories across layers, which breaks `dpkg` in the addon build, so Docker uses `fuse-overlayfs` there. An isolated machine does not see your Mac files, so copy the repo in and run the tests from the repo root:
+
+```sh
+tar --exclude .git -cf - . | orb -m ha-e2e -u root sh -c 'rm -rf /root/addon && mkdir /root/addon && tar -C /root/addon -xf -'
+orb -m ha-e2e -u root sh -c 'cd /root/addon && tests/e2e/run.sh'
+```
+
+Inside an OrbStack machine the Supervisor reports the system as unhealthy (`privileged`) and its plugins cannot start. The script ignores that health check and stands in for the DNS plugin with CoreDNS. On a CI runner neither happens.
+
+Environment variables:
+
+| Variable | Effect |
+|---|---|
+| `HASSOS_ADDONS_DIR` | Take `config.yaml` and `translations/` from this `hassos-addons` checkout instead of its `main` branch on GitHub, e.g. to test a schema change before pushing it |
+| `CASES` | Run only the cases matching this glob, e.g. `CASES='loki-*'` |
+| `KEEP=1` | Leave all containers and the Supervisor data dir in place after the run, for debugging |
+| `E2E_DATA` | Supervisor data dir, default `/tmp/supervisor-e2e` |
+
 ### Release
 
 1. Add release notes to `hassos-addons/vector-dev/CHANGELOG.md` under `## <version>` and push them to `main`.
-2. Here, run `make release` (needs an authenticated `gh`). It reads that changelog section from `hassos-addons` `main` and fails if it is missing or empty. Then it fast-forwards `main` to `dev`, creates an annotated tag with the section as message, pushes, waits for the release images and creates the GitHub release with the tag message as description.
+2. Here, run `make release` (needs an authenticated `gh`). It first waits for the E2E run on the tip of `dev` and stops if it is missing or red, before anything is tagged or pushed. It reads that changelog section from `hassos-addons` `main` and fails if it is missing or empty. Then it fast-forwards `main` to `dev`, creates an annotated tag with the section as message, pushes, waits for the release images and creates the GitHub release with the tag message as description.
 3. In `hassos-addons`, run `make release VERSION=<version>`. It copies `vector-dev/` to `vector/`, sets the version and commits.
 
 The version defaults to the next minor after the latest tag. Override it with `VERSION=x.y.z`. `make` lists all targets.
