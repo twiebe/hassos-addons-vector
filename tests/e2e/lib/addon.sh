@@ -74,6 +74,7 @@ addon_restart_wait() {
     ha apps stop "$ADDON_SLUG" >/dev/null 2>&1 || true
     if [ "$1" = true ]; then
         ha apps start "$ADDON_SLUG" >/dev/null || return 1
+        addon_check_journal_mount
         wait_for 60 "addon start" _addon_started
     else
         ha apps start "$ADDON_SLUG" >/dev/null 2>&1 || true
@@ -85,6 +86,9 @@ addon_restart_wait() {
 # On a plain Linux host, journald: true might mount nothing, which would make
 # every case time out for a reason that has nothing to do with the addon.
 addon_check_journal_mount() {
-    docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$(addon_container)" |
+    local c
+    c=$(addon_container)
+    [ -n "$c" ] || die "addon container not found after start"
+    docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$c" |
         grep -qx /var/log/journal || die "addon has no /var/log/journal mount"
 }

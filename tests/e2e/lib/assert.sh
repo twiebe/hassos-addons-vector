@@ -32,7 +32,6 @@ case_run() {
     addon_configure "$options" || _case_fail "options rejected by the Supervisor" || return 1
     addon_restart_wait "$expect_started" ||
         _case_fail "addon did not reach the expected state (started=$expect_started)" || return 1
-    [ "$expect_started" = true ] && addon_check_journal_mount
 
     while read -r needle; do
         [ -z "$needle" ] && continue
@@ -42,7 +41,7 @@ case_run() {
     [ "$backend" = none ] && return 0
 
     id="e2e-${CASE_NAME}-$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-    markers_emit "$id"
+    markers_emit "$id" || _case_fail "could not emit markers" || return 1
     host_label=$(jq -r 'if .transforms.rename_host_field then .transforms.host_field_name else "host" end' <<<"$options")
     records=$(backend_records "$backend" "$id" "$host_label")
     [ "$(jq 'length' <<<"$records")" -ge 2 ] ||

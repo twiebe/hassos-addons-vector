@@ -122,7 +122,7 @@ Environment variables:
 |---|---|
 | `HASSOS_ADDONS_DIR` | Take `config.yaml` and `translations/` from this `hassos-addons` checkout instead of its `main` branch on GitHub, e.g. to test a schema change before pushing it |
 | `CASES` | Run only the cases matching this glob, e.g. `CASES='loki-*'` |
-| `KEEP=1` | Leave all containers and the Supervisor data dir in place after the run, for debugging |
+| `KEEP=1` | Leave all containers and the Supervisor data dir in place after the run, for debugging. The next run still starts clean |
 | `E2E_DATA` | Supervisor data dir, default `/tmp/supervisor-e2e` |
 
 ### Release

@@ -2,8 +2,8 @@
 # addon reaches them through the gateway of the Supervisor's hassio network.
 
 HASSIO_GATEWAY=172.30.32.1
-VICTORIALOGS_IMAGE=${VICTORIALOGS_IMAGE:-docker.io/victoriametrics/victoria-logs:latest}
-LOKI_IMAGE=${LOKI_IMAGE:-docker.io/grafana/loki:latest}
+VICTORIALOGS_IMAGE=${VICTORIALOGS_IMAGE:-docker.io/victoriametrics/victoria-logs:v1.54.0}
+LOKI_IMAGE=${LOKI_IMAGE:-docker.io/grafana/loki:3.7.10}
 # Tenant the loki-mt backend is queried as; cases send logs as this tenant.
 LOKI_TENANT=e2e-tenant
 
@@ -18,15 +18,18 @@ backend_endpoint() {
     esac
 }
 
-backends_start() {
+backends_launch() {
     log "starting VictoriaLogs, Loki and multi-tenant Loki"
     docker run -d --name e2e-victorialogs -p 9428:9428 "$VICTORIALOGS_IMAGE" >/dev/null
     docker run -d --name e2e-loki -p 3100:3100 "$LOKI_IMAGE" \
-        -config.file=/etc/loki/local-config.yaml >/dev/null
+        -config.file=/etc/loki/local-config.yaml -ingester.min-ready-duration=0s >/dev/null
     # A separate multi-tenant Loki: it rejects pushes without X-Scope-OrgID,
     # which would break the default Loki case.
     docker run -d --name e2e-loki-mt -p 3101:3100 "$LOKI_IMAGE" \
-        -config.file=/etc/loki/local-config.yaml -auth.enabled=true >/dev/null
+        -config.file=/etc/loki/local-config.yaml -auth.enabled=true -ingester.min-ready-duration=0s >/dev/null
+}
+
+backends_wait() {
     wait_for 120 "VictoriaLogs" curl -fsS http://127.0.0.1:9428/health || die "VictoriaLogs did not come up"
     wait_for 180 "Loki" sh -c 'curl -fsS http://127.0.0.1:3100/ready | grep -q ready' || die "Loki did not come up"
     wait_for 180 "multi-tenant Loki" sh -c 'curl -fsS http://127.0.0.1:3101/ready | grep -q ready' ||
@@ -53,7 +56,7 @@ _records_loki() {
         --data-urlencode "query={${host_label}=~\".+\"} |= \"${id}\"" \
         --data-urlencode "start=$((now - 3600))000000000" \
         --data-urlencode "end=$((now + 60))000000000" \
-        --data-urlencode "limit=100" |
+        --data-urlencode "limit=5000" |
         jq -c --arg id "$id" "[.data.result[] | .stream as \$s | .values[] |
                 {labels: \$s, line: .[1], fields: (.[1] | fromjson? // {})} | $MARKER_FILTER]"
 }
@@ -69,8 +72,8 @@ backend_records() {
             loki-mt)      records=$(_records_loki "$id" "$host_label" 3101 "$LOKI_TENANT" 2>/dev/null || echo '[]') ;;
         esac
         [ "$(jq 'length' <<<"$records")" -ge 2 ] && break
-        sleep 3
-        elapsed=$((elapsed + 3))
+        sleep 1
+        elapsed=$((elapsed + 1))
     done
     echo "$records"
 }

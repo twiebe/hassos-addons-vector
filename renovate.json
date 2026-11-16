@@ -30,6 +30,17 @@
         "(?<depName>ghcr\\.io/hassio-addons/[^:]+):(?<currentValue>[\\d.]+)"
       ],
       "datasourceTemplate": "docker"
+    },
+    {
+      "description": "Container images used by the e2e tests",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^tests/e2e/lib/.+\\.sh$/"
+      ],
+      "matchStrings": [
+        "(?<depName>docker\\.io/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [

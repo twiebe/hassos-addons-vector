@@ -45,8 +45,8 @@ wait_for() {
     shift 2
     until "$@" >/dev/null 2>&1; do
         [ "$elapsed" -ge "$timeout" ] && { log "timed out after ${timeout}s waiting for $what"; return 1; }
-        sleep 2
-        elapsed=$((elapsed + 2))
+        sleep 1
+        elapsed=$((elapsed + 1))
     done
 }
 
@@ -78,15 +78,21 @@ _supervisor_health() {
 # on the hassio network resolves names, so the addon build fails. Stand in
 # with a plain CoreDNS on the plugin's address.
 _supervisor_dns() {
-    local ip
-    wait_for 30 "DNS plugin" sh -c '[ "$(docker inspect -f {{.State.Running}} hassio_dns 2>/dev/null)" = true ]' && return 0
+    local ip i running err
+    for i in $(seq 1 30); do
+        running=$(docker inspect -f '{{.State.Running}}' hassio_dns 2>/dev/null || true)
+        err=$(docker inspect -f '{{.State.Error}}' hassio_dns 2>/dev/null || true)
+        [ "$running" = true ] && return 0
+        [ -n "$err" ] && break
+        sleep 1
+    done
     ip=$(ha dns info | jq -r '.data.host')
     log "DNS plugin did not start (container host?), using CoreDNS on $ip instead"
     docker rm -f hassio_dns >/dev/null 2>&1 || true
     mkdir -p "${E2E_DATA}/e2e"
     printf '. {\n    forward . /etc/resolv.conf\n    cache 30\n}\n' > "${E2E_DATA}/e2e/Corefile"
     docker run -d --name e2e-dns --network hassio --ip "$ip" \
-        -v "${E2E_DATA}/e2e/Corefile:/Corefile:ro" "${COREDNS_IMAGE:-docker.io/coredns/coredns:latest}" \
+        -v "${E2E_DATA}/e2e/Corefile:/Corefile:ro" "${COREDNS_IMAGE:-docker.io/coredns/coredns:1.15.0}" \
         -conf /Corefile >/dev/null
 }
 
@@ -119,6 +125,11 @@ supervisor_start() {
     wait_for 300 "Supervisor API" _supervisor_ping || { supervisor_dump; die "Supervisor did not come up"; }
     wait_for 120 "ha CLI" docker exec hassio_cli ha supervisor info --no-progress --raw-json ||
         { supervisor_dump; die "ha CLI did not come up"; }
+    # Health evaluations finish during setup; read them once the Supervisor
+    # reports running, not at the first ping.
+    wait_for 180 "Supervisor state running" sh -c \
+        'docker exec hassio_cli ha info --no-progress --raw-json | jq -e ".data.state == \"running\""' ||
+        { supervisor_dump; die "Supervisor did not reach state running"; }
     log "Supervisor API up"
     _supervisor_health
     _supervisor_dns

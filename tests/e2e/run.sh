@@ -18,17 +18,19 @@ for lib in "$E2E_DIR"/lib/*.sh; do
 done
 
 host_check
-teardown
+shopt -s nullglob
+cases=("$E2E_DIR"/cases/${CASES:-*}/)
+[ "${#cases[@]}" -gt 0 ] || die "no test cases match CASES='${CASES:-*}'"
+teardown force
 trap teardown EXIT
 host_prepare
+backends_launch
 supervisor_start
-backends_start
+backends_wait
 addon_install
 
 passed=0
 failed=()
-shopt -s nullglob
-cases=("$E2E_DIR"/cases/${CASES:-*}/)
 log "${#cases[@]} cases"
 for dir in "${cases[@]}"; do
     name=$(basename "$dir")
