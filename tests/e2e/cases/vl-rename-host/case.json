@@ -1,0 +1,14 @@
+{
+  "backend": "victorialogs",
+  "options": {
+    "transforms": { "rename_host_field": true, "host_field_name": "hostname" },
+    "sink_type": "victorialogs",
+    "sink_victorialogs": { "endpoint": "@ENDPOINT@/insert/elasticsearch" }
+  },
+  "expect": {
+    "record": [
+      ".fields.hostname != null",
+      ".fields.host == null"
+    ]
+  }
+}
